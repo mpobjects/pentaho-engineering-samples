@@ -74,6 +74,13 @@
       <!-- Examples: 'Pentaho:Report Author', 'Zendesk:CTools Support', 'Office365:Contributor C1', 'Pentaho:Authenticated', ... -->
       <cm:property name="saml.role.related.user.attribute.prefix" value="Pentaho:" />
 
+      <!-- =================================== -->
+      <!-- user attributes mapped to session   -->
+      <!-- =================================== -->
+
+      <!-- Regular expression pattern of attributes from the SAML Credential to register as session attributes -->
+      <cm:property name="saml.session.attribute.pattern" value="" />
+
       <!-- ========================== -->
       <!-- certificates keystore      -->
       <!-- ========================== -->
@@ -235,6 +242,7 @@
   <bean id="samlUserDetailsService" class="org.pentaho.platform.spring.security.saml.groups.PentahoSamlNativeUserDetailsService" activation="eager">
     <property name="roleRelatedUserAttributeName" value="${saml.role.related.user.attribute.name}" />
     <property name="roleRelatedAttributePrefix" value="${saml.role.related.user.attribute.prefix}" />
+    <property name="sessionAttributePattern" value="${saml.session.attribute.pattern}" />
     <property name="tenantedPrincipleNameResolver">
       <bean class="org.pentaho.platform.security.userroledao.DefaultTenantedPrincipleNameResolver"/>
     </property>

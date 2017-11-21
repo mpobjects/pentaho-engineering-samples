@@ -3,12 +3,18 @@ package org.pentaho.platform.spring.security.saml.groups;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.opensaml.saml2.core.Attribute;
 import org.opensaml.xml.XMLObject;
+import org.opensaml.xml.schema.XSAny;
+import org.opensaml.xml.schema.XSString;
 import org.opensaml.xml.schema.impl.XSAnyImpl;
 import org.opensaml.xml.schema.impl.XSStringImpl;
+import org.pentaho.platform.api.engine.IPentahoSession;
 import org.pentaho.platform.api.mt.ITenantedPrincipleNameResolver;
+import org.pentaho.platform.engine.core.system.PentahoSessionHolder;
 import org.pentaho.platform.spring.security.saml.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +53,12 @@ public class PentahoSamlNativeUserDetailsService implements SAMLUserDetailsServi
    * ...
    */
   private String roleRelatedAttributePrefix;
+
+  /**
+   * Regular expression which defines which attributes from the SAML credentials
+   * will be registered in the user's session.
+   */
+  private String sessionAttributePattern;
 
   ITenantedPrincipleNameResolver tenantedPrincipleNameResolver;
 
@@ -93,6 +105,11 @@ public class PentahoSamlNativeUserDetailsService implements SAMLUserDetailsServi
 
       Utils.getUserMap().put( username, userDetails );
 
+      if ( getSessionAttributePattern() != null && !getSessionAttributePattern().isEmpty() ) {
+        loadSessionAttributes( PentahoSessionHolder.getSession(), credential.getAttributes(),
+            Pattern.compile(getSessionAttributePattern()), getRoleRelatedUserAttributeName() );
+      }
+
       return userDetails;
     }
   }
@@ -130,6 +147,21 @@ public class PentahoSamlNativeUserDetailsService implements SAMLUserDetailsServi
     this.roleRelatedAttributePrefix = roleRelatedAttributePrefix;
   }
 
+  public String getSessionAttributePattern() {
+    return sessionAttributePattern;
+  }
+
+  public void setSessionAttributePattern(String aSessionAttributePattern) {
+    sessionAttributePattern = aSessionAttributePattern;
+    if (sessionAttributePattern != null && !sessionAttributePattern.isEmpty()) {
+      try {
+        Pattern.compile(sessionAttributePattern);
+      } catch (PatternSyntaxException e) {
+        throw new IllegalArgumentException("Not a valid session attribute pattern: " + sessionAttributePattern, e);
+      }
+    }
+  }
+
   public ITenantedPrincipleNameResolver getTenantedPrincipleNameResolver() {
     return tenantedPrincipleNameResolver;
   }
@@ -157,6 +189,37 @@ public class PentahoSamlNativeUserDetailsService implements SAMLUserDetailsServi
     }
 
     return authorities;
+  }
+
+  private void loadSessionAttributes(IPentahoSession session, List<Attribute> attributes, Pattern pattern, String aRoleAttribute) {
+    for ( Attribute attr : attributes ) {
+      final String attrName = attr.getName();
+      if (attrName.equals(aRoleAttribute) || ! pattern.matcher(attrName).matches()) {
+        continue;
+      }
+      List<String> values = extractValues(attr.getAttributeValues());
+      if ( values.size() == 1 ) {
+        session.setAttribute(attr.getName(), values.get(0));
+      } else if (!values.isEmpty()) {
+        session.setAttribute(attr.getName(), values);
+      }
+    }
+  }
+
+  private List<String> extractValues(List<XMLObject> aValues) {
+    List<String> result = new ArrayList<>();
+    for (XMLObject val : aValues) {
+      String strval = null;
+      if ( val instanceof XSString ) {
+        strval = ((XSString) val).getValue();
+      } else if ( val instanceof XSAny ) {
+        strval = ((XSAny) val).getTextContent();
+      }
+      if (strval != null) {
+        result.add(strval);
+      }
+    }
+    return result;
   }
 
   private Collection<GrantedAuthority> roleRelatedAttributeToGrantedAuthorities( Attribute roleRelatedAttribute ) {
