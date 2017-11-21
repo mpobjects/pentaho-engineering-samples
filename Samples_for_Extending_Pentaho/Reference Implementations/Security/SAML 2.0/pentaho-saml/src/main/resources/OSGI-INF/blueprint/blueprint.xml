@@ -131,7 +131,8 @@
       <!-- one-of: saml | jdbc | memory -->
       <!-- for authorization.providers other than 'saml', we'll look for published
           UserDetailsService/IUserRoleListService ones ( even if these are non-osgi ones )  -->
-      <cm:property name="authorization.provider" value="saml" />
+      <cm:property name="user.authorization.provider" value="saml" />
+      <cm:property name="role.authorization.provider" value="saml" />
       
       <!-- When a username is not found in the authorization provider, should a user details
           object be created with the default role? Enabling this option can cause problems 
@@ -276,14 +277,14 @@
   </bean>
 
   <bean id="userDetails" class="org.pentaho.platform.spring.security.saml.PentahoSamlUserDetailsService" activation="eager">
-    <argument value="${authorization.provider}" /> <!-- use the UserDetailsService published with this providerName -->
+    <argument value="${user.authorization.provider}" /> <!-- use the UserDetailsService published with this providerName -->
     <property name="samlUserDetailsService" ref="samlUserDetailsService" />
     <property name="samlId" value="${saml.id}" />
     <property name="createDetailsOnUsernameNotFoundException" value="${create.user.details.not.found.in.authorization.provider}" />
   </bean>
 
   <bean id="userRoleList" class="org.pentaho.platform.spring.security.saml.PentahoSamlUserRoleListService" activation="eager">
-    <argument value="${authorization.provider}" /> <!-- use the UserRoleListService published with this providerName -->
+    <argument value="${role.authorization.provider}" /> <!-- use the UserRoleListService published with this providerName -->
     <property name="samlUserRoleListService" ref="samlUserRoleListService" />
     <property name="samlId" value="${saml.id}" />
   </bean>
