@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.providers.ExpiringUsernameAuthenticationToken;
+import org.springframework.security.saml.SAMLCredential;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.util.Assert;
 import org.springframework.beans.factory.InitializingBean;
@@ -39,6 +40,8 @@ public class PentahoSamlAuthenticationSuccessHandler extends SavedRequestAwareAu
   public static final String SPRING_SECURITY_CONTEXT_KEY = "SPRING_SECURITY_CONTEXT";
   //Initializing it to "true" so the code 6.1 or earlier works without any chanegs
   public boolean requireProxyWrapping =true;
+
+  public boolean processRelayState = true;
 
   @Override
   public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -85,15 +88,53 @@ public class PentahoSamlAuthenticationSuccessHandler extends SavedRequestAwareAu
 
       // time to create this user's home folder
       createUserHomeFolder( authentication.getName() );
+      
+      HttpServletResponse newResponse = new SamlOnRedirectUpdateSessionResponseWrapper( response, request, true,
+          0, requireProxyWrapping ? securityContextProxy : SecurityContextHolder.getContext(),
+          authentication );
 
-      super.onAuthenticationSuccess( request, new SamlOnRedirectUpdateSessionResponseWrapper( response, request, true,
-          0,
-          requireProxyWrapping ? securityContextProxy : SecurityContextHolder.getContext(),
-          authentication ), authentication );
+      if (handleRelayState( request, newResponse, authentication )) {
+        return;
+      }
+      else {
+        super.onAuthenticationSuccess( request, newResponse, authentication );
+      }
 
     } catch ( Exception e ) {
       logger.error( e.getLocalizedMessage(), e );
     }
+  }
+
+
+  /**
+   * Handle the provided relay state and redirect the request
+   * 
+   * @return True a redirect was initiated
+   * @throws IOException 
+   */
+  private boolean handleRelayState(HttpServletRequest request, HttpServletResponse response,
+    Authentication authentication) throws IOException {
+    if (!processRelayState) {
+      return false;
+    }
+    Object credentials = authentication.getCredentials();
+    if (credentials instanceof SAMLCredential) {
+      SAMLCredential samlCredential = (SAMLCredential) credentials;
+      String relayStateURL = getTargetURL(samlCredential.getRelayState());
+      if (relayStateURL != null) {
+        logger.info("Redirecting to RelayState Url: {}", relayStateURL);
+        getRedirectStrategy().sendRedirect(request, response, relayStateURL);
+        return true;
+      }
+    }
+    else {
+      logger.info("No SAMLCredential is Authentication token: {}", credentials);
+    }
+    return false;
+  }
+
+  protected String getTargetURL(String aRelayState) {
+    return aRelayState;
   }
 
 
@@ -186,6 +227,10 @@ public class PentahoSamlAuthenticationSuccessHandler extends SavedRequestAwareAu
     } catch ( Exception e ) {
       logger.error( e.getLocalizedMessage(), e );
     }
+  }
+
+  public void setProcessRelayState(boolean aProcessRelayState) {
+    processRelayState = aProcessRelayState;
   }
 
   public void setRequireProxyWrapping(boolean requireWrapping){

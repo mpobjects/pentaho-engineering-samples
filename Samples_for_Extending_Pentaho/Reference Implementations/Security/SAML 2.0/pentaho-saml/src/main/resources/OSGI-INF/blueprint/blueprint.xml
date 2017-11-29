@@ -62,6 +62,9 @@
       <!-- fallback initialization with default classpath bundled sp metadata -->
       <cm:property name="saml.sp.metadata.classpath.fallback" value="/metadata/sp/pentaho-ssocircle-dev-sp.xml" />
 
+      <!-- redirect to the RelayState URL after authentication -->
+      <cm:property name="saml.sp.process.relaystate" value="true" />
+
       <!-- =================================== -->
       <!-- user attributes mapped to roles     -->
       <!-- =================================== -->
@@ -421,6 +424,7 @@
   						init-method="afterPropertiesSet">
     <property name="defaultTargetUrl" value="/index.jsp"/>
     <property name="requireProxyWrapping" value="false"/>
+    <property name="processRelayState" value="${saml.sp.process.relaystate}" />
   </bean>
 
   <!-- Handler deciding where to redirect user after failed login -->
