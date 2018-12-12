@@ -195,7 +195,7 @@
       <div class="envelop-wrapper"> 
           <div class="logout-msg-wrapper"><%=Messages.getInstance().getString("UI.PUC.LOGOUT.HEADER")%></div>
           <hr class="logout-hr-line" />
-          <form name="back2Login" id="back2Login" action="/" method="GET" onkeyup="if(window.event && window.event.keyCode && window.event.keyCode==13){var buttonToClick = document.getElementById('back2LoginBtn'); if(buttonToClick){ buttonToClick.click();}}">
+          <form name="back2Login" id="back2Login" action="." method="GET" onkeyup="if(window.event && window.event.keyCode && window.event.keyCode==13){var buttonToClick = document.getElementById('back2LoginBtn'); if(buttonToClick){ buttonToClick.click();}}">
             <div class="row-fluid nowrap">
               <div class="input-container">
                 <button type="submit" class="btn back-to-login-btn"><%=Messages.getInstance().getString("UI.PUC.LOGOUT.BUTTON")%></button>
